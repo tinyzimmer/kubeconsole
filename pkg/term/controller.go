@@ -39,7 +39,7 @@ type controller struct {
 	logChan     chan string
 	detailsChan chan string
 	debugChan   chan string
-	errorChan   chan error
+	errorChan   chan *errorWithStack
 
 	mux sync.Mutex
 }
@@ -47,7 +47,7 @@ type controller struct {
 // New returns a new terminal ui controller
 func New(factory k8sutils.KubernetesFactory, debug bool) Controller {
 	c := &controller{factory: factory}
-	c.errorChan = make(chan error)
+	c.errorChan = make(chan *errorWithStack)
 	c.debugChan = make(chan string)
 	c.navWindow = newNavWindow()
 	c.serverWindow = newAPIServerWindow(factory.ApiHost())
@@ -161,6 +161,7 @@ func (c *controller) listenForErrors() {
 		case err := <-c.errorChan:
 			c.mux.Lock()
 			c.debug(err.Error())
+			c.debug(err.Stack())
 			c.errorWindow.Text = err.Error()
 			ui.Render(c.errorWindow)
 			time.Sleep(time.Duration(2) * time.Second)

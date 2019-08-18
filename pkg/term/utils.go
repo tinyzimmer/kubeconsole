@@ -3,7 +3,6 @@ package term
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -12,6 +11,21 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 )
+
+type errorWithStack struct {
+	error
+
+	errMsg   string
+	errStack string
+}
+
+func (e *errorWithStack) Error() string {
+	return e.errMsg
+}
+
+func (e *errorWithStack) Stack() string {
+	return e.errStack
+}
 
 func (c *controller) podScroll(f func()) {
 	c.setupIfLogWindow()
@@ -39,8 +53,10 @@ func cancelIfNotNil(f func()) {
 	}
 }
 
-func newErrorWithStack(err error) (serr error) {
-	serr = errors.New(fmt.Sprintf("ERROR: %v\n%s", err, string(debug.Stack())))
+func newErrorWithStack(err error) (serr *errorWithStack) {
+	serr = &errorWithStack{}
+	serr.errMsg = fmt.Sprintf("ERROR: %v", err.Error())
+	serr.errStack = string(debug.Stack())
 	return serr
 }
 
