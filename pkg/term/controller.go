@@ -1,0 +1,211 @@
+package term
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
+	"github.com/tinyzimmer/kubeconsole/pkg/k8sutils"
+	"golang.org/x/crypto/ssh/terminal"
+)
+
+// Controller is the exported controller interface
+type Controller interface {
+	Run() error
+}
+
+type controller struct {
+	Controller
+
+	factory k8sutils.KubernetesFactory
+
+	navWindow     *widgets.TabPane
+	helpWindow    *widgets.Paragraph
+	serverWindow  *widgets.Paragraph
+	namespaceList *widgets.List
+	podList       *widgets.List
+	detailsWindow *widgets.Paragraph
+	logWindow     *widgets.List
+	console       *widgets.List
+	execWindow    *widgets.Paragraph
+	errorWindow   *widgets.Paragraph
+
+	consoleFocused bool
+	debugToFile    bool
+
+	logChan     chan string
+	detailsChan chan string
+	debugChan   chan string
+	errorChan   chan error
+}
+
+// New returns a new terminal ui controller
+func New(factory k8sutils.KubernetesFactory, debug bool) Controller {
+	c := &controller{factory: factory}
+	c.errorChan = make(chan error)
+	c.debugChan = make(chan string)
+	c.navWindow = newNavWindow()
+	c.serverWindow = newAPIServerWindow(factory.ApiHost())
+	c.helpWindow = newHelpWindow()
+	c.detailsWindow, c.detailsChan = newDetailsWindow()
+	c.logWindow, c.logChan = c.newLogWindow()
+	c.console = newConsoleWindow()
+	c.execWindow = newExecWindow()
+	c.errorWindow = newErrorWindow()
+	c.debugToFile = debug
+	return c
+}
+
+func (c *controller) Run() error {
+	c.debug(fmt.Sprintf("Connected to %s", c.factory.ApiHost()))
+	c.debug("Starting handlers")
+	// listen on the error channel
+	go c.listenForErrors()
+	//  handle terminal resizes - work in progress
+	go c.handleResize()
+
+	c.debug("Fetching namespaces")
+	// set up the namespace list
+	selectionChan := make(chan string)
+	c.namespaceList = c.newNamespaceList()
+
+	// prepare the pod list
+	c.podList = c.newPodList(selectionChan)
+
+	// render defaults and bring up namespace prompt
+	c.debug("Starting poll loops")
+	c.renderDefaults()
+	c.pollNamespaces(selectionChan)
+	return nil
+}
+
+// renderDefaults renders the default panes
+func (c *controller) renderDefaults() {
+	ui.Render(
+		c.navWindow,
+		c.serverWindow,
+		c.helpWindow,
+		c.podList,
+		c.detailsWindow,
+		c.logWindow,
+	)
+}
+
+// resizeDefaults is my hacky resizer for now. It essentially starts
+// a brand new session, saving current values where appropriate.
+// This current causes some bugginess after the resize. You basically need
+// to switch around the namespace and pod view to get things back to perfect.
+// But at least you don't have to restart.
+func (c *controller) resizeDefaults() {
+	c.navWindow = newNavWindow()
+	c.serverWindow = newAPIServerWindow(c.factory.ApiHost())
+	c.helpWindow = newHelpWindow()
+
+	ch := make(chan string)
+	c.podList = c.newPodList(ch)
+	if currentNamespace != "" {
+		ch <- currentNamespace
+	} else {
+		c.namespaceList = c.newNamespaceList()
+	}
+
+	detailsBak := c.detailsWindow.Text
+	c.detailsWindow, c.detailsChan = newDetailsWindow()
+	c.detailsWindow.Text = detailsBak
+
+	logBak := c.logWindow.Rows
+	c.logWindow, c.logChan = c.newLogWindow()
+	c.logWindow.Rows = logBak
+
+	ui.Clear()
+	c.renderDefaults()
+	if currentNamespace == "" {
+		c.renderNamespaceList()
+	}
+}
+
+// just render the namespace prompt
+func (c *controller) renderNamespaceList() {
+	ui.Render(c.namespaceList)
+}
+
+// render the debug console
+func (c *controller) renderConsole() {
+	ui.Render(c.console)
+}
+
+// reset the Log Window
+func (c *controller) resetLogWindow() {
+	c.logWindow, c.logChan = c.newLogWindow()
+}
+
+// listen on the error channel and bring up a prompt when
+// any get raised
+func (c *controller) listenForErrors() {
+	for {
+		select {
+		case err := <-c.errorChan:
+			c.debug(err.Error())
+			c.errorWindow.Text = err.Error()
+			ui.Render(c.errorWindow)
+		}
+	}
+}
+
+// write debug message to console
+func (c *controller) debug(msg string) {
+	newMsg := fmt.Sprintf("> [%v] %s", time.Now().Local(), msg)
+	c.console.Rows = append(c.console.Rows, newMsg)
+	c.console.ScrollBottom()
+	if c.consoleFocused {
+		c.renderConsole()
+	}
+	if c.debugToFile {
+		f, err := os.OpenFile("debug.log",
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			c.errorChan <- newErrorWithStack(err)
+			return
+		}
+		defer f.Close()
+		if _, err := f.WriteString(fmt.Sprintf("%s\n", newMsg)); err != nil {
+			c.errorChan <- newErrorWithStack(err)
+			return
+		}
+	}
+}
+
+// check for a change in terminal size (run in a goroutine)
+// when terminal size change +/- 1 pixel - resise the windows
+func (c *controller) handleResize() {
+	var x, y, nx, ny int
+	var err error
+	x, y, err = terminal.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	for {
+		nx, ny, err = terminal.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			panic(err)
+		}
+		if !plusOrMinus(x, nx, 2) || !plusOrMinus(y, ny, 2) {
+			c.debug("Detected terminal resize")
+			c.resizeDefaults()
+		}
+		x = nx
+		y = ny
+	}
+}
+
+func plusOrMinus(val1 int, val2 int, comp int) bool {
+	for x := 0; x <= comp; x++ {
+		switch {
+		case val1 == val2-x || val1 == val2+x:
+			return true
+		}
+	}
+	return false
+}
