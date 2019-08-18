@@ -6,3 +6,4 @@ export CGO_ENABLED
 build:
 	mkdir -p bin
 	cd bin && gox -arch="amd64" -os="windows darwin linux" -parallel=3 ../cmd/kubeconsole
+	ls -al bin/
