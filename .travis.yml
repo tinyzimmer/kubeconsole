@@ -1,0 +1,19 @@
+language: go
+go:
+- '1.12.x'
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+before_install:
+- go get github.com/mitchellh/gox
+script:
+- make build
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: oCKQEdmKPHeULtcDKrXThy87wVsHUrA/A/skw7ryyqeE9IlWHfU6hMqIPF7Jw4fYhInBK9qb+mTqFze//4vN1JlfzHkoMKqEqjT6cZm91rsY5Jx5yNV1p5/D0D8Y5ObFJ1dI6LMaG6cURkqcHqdtU23zckP4vZ4Sbaq1mSWbMSTE3rW1ZtOnbzRBLr/frJb5CwiIJwCjYojDB57emkMqXQkqPeiPVx2SyPNRX6PEJmaY/aUKFxjYNp8KO91UlBS3CMCIcmbsS5p44txgUGdEGvDMzvDYXLPexGSP2pKnpAWUPVjaSUGNzZ1T3hV8AIOZqfUQeaxBxftZsyDIQI78QNu8zoG06jBMaIlwR3JyyQAvdOKp450xvR1adxPLm/I6AxqgCJbUuThsYJmZFOxbH72EcV61mXKwkatebe1Jvil1E78fXaD/6l2cs8LFpyWmoet+VLofFz3eo3M92U90b/t7zUOZwR9I39ffiDxSW9F4Y129sW9EvFoD5pkJqcjlpc/HafEDZdPftoV4dXwXDqiOccBjBD9KhZ1ExFs2lkd4FGnD1rhy9JVy6EaS4XhXWG7KlfMr7k7v8scuiug6Vnbh/rFj860lcB3jJjyUoFb5lWgqYnT7pw4e5G0EcwT+/m4FICddEJd5RracqAIMAfA4rrBEqJjegDEOc+5iXZw=
+  file_glob: true
+  file: bin/*
+  on:
+    tags: true

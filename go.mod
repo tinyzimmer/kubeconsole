@@ -9,8 +9,6 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/mum4k/termdash v0.10.0 // indirect
-	github.com/pborman/ansi v0.0.0-20160920233902-86f499584b0a // indirect
 	github.com/spf13/pflag v1.0.3 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
