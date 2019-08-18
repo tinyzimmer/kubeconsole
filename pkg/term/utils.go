@@ -25,7 +25,9 @@ func (c *controller) setupIfLogWindow() {
 		cancelIfNotNil(logCancel)
 		if !logsPaused {
 			c.logWindow.Title = fmt.Sprintf("%s   PAUSED: Press <enter> to resume ", c.logWindow.Title)
+			c.mux.Lock()
 			ui.Render(c.logWindow)
+			c.mux.Unlock()
 			logsPaused = true
 		}
 	}
@@ -85,7 +87,9 @@ func (c *controller) switchPane() {
 		focus = c.podList
 	}
 	focus.Title = fmt.Sprintf(" * %s ", focus.Title)
+	c.mux.Lock()
 	ui.Render(focus)
+	c.mux.Unlock()
 }
 
 func (c *controller) displayNamespaceList() {
@@ -115,7 +119,7 @@ func asyncCopy(ctx context.Context, dst io.Writer, src io.Reader) (err error) {
 	_, err = io.Copy(dst, readerFunc(func(p []byte) (int, error) {
 		select {
 		case <-ctx.Done():
-			return 0, nil
+			return 0, ctx.Err()
 		default:
 			return src.Read(p)
 		}

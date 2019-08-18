@@ -34,7 +34,9 @@ func (c *controller) newNamespaceList() (l *widgets.List) {
 		select {
 		case newRows := <-rowChan:
 			l.Rows = newRows
+			c.mux.Lock()
 			ui.Render(l)
+			c.mux.Unlock()
 			return
 		}
 	}()
@@ -65,7 +67,10 @@ func (c *controller) newPodList(ch chan string) (l *widgets.List) {
 				}
 				l.Title = fmt.Sprintf(" %s   Namespace: %s ", podsTitle, selection)
 				l.Rows = rows
+
+				c.mux.Lock()
 				ui.Render(l)
+				c.mux.Unlock()
 			}
 		}
 	}()

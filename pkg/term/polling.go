@@ -136,7 +136,11 @@ func (c *controller) pollPods() {
 		case "c":
 			cancelIfNotNil(logCancel)
 			c.navWindow.FocusRight()
+
+			c.mux.Lock()
 			ui.Render(c.navWindow, c.console)
+			c.mux.Unlock()
+
 			c.pollConsole()
 			return
 
@@ -173,6 +177,7 @@ func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 		select {
 		case <-stch:
 			cancel()
+			stdin.Close()
 			c.pollPods()
 			return
 		default:
@@ -229,6 +234,7 @@ func (c *controller) pollConsole() {
 			return
 
 		}
-		ui.Render(c.console)
+		c.renderConsole()
+
 	}
 }

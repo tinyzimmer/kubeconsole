@@ -3,6 +3,7 @@ package term
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -39,6 +40,8 @@ type controller struct {
 	detailsChan chan string
 	debugChan   chan string
 	errorChan   chan error
+
+	mux sync.Mutex
 }
 
 // New returns a new terminal ui controller
@@ -83,6 +86,8 @@ func (c *controller) Run() error {
 
 // renderDefaults renders the default panes
 func (c *controller) renderDefaults() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	ui.Render(
 		c.navWindow,
 		c.serverWindow,
@@ -99,6 +104,8 @@ func (c *controller) renderDefaults() {
 // to switch around the namespace and pod view to get things back to perfect.
 // But at least you don't have to restart.
 func (c *controller) resizeDefaults() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	c.navWindow = newNavWindow()
 	c.serverWindow = newAPIServerWindow(c.factory.ApiHost())
 	c.helpWindow = newHelpWindow()
@@ -128,11 +135,15 @@ func (c *controller) resizeDefaults() {
 
 // just render the namespace prompt
 func (c *controller) renderNamespaceList() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	ui.Render(c.namespaceList)
 }
 
 // render the debug console
 func (c *controller) renderConsole() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	ui.Render(c.console)
 }
 
@@ -144,12 +155,16 @@ func (c *controller) resetLogWindow() {
 // listen on the error channel and bring up a prompt when
 // any get raised
 func (c *controller) listenForErrors() {
+
 	for {
 		select {
 		case err := <-c.errorChan:
+			c.mux.Lock()
 			c.debug(err.Error())
 			c.errorWindow.Text = err.Error()
 			ui.Render(c.errorWindow)
+			time.Sleep(time.Duration(2) * time.Second)
+			c.mux.Unlock()
 		}
 	}
 }

@@ -33,7 +33,10 @@ func (c *controller) newLogWindow() (*widgets.List, chan string) {
 						logs.Rows = newRows
 						logs.ScrollBottom()
 						logs.ScrollPageDown()
+
+						c.mux.Lock()
 						ui.Render(logs)
+						c.mux.Unlock()
 					}
 				}
 			}

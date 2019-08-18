@@ -65,8 +65,10 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 				}
 				c.execWindow.Text = stripAnsi(outStr)
 				//c.execWindow.ScrollBottom()
-				ui.Render(c.execWindow)
 
+				c.mux.Lock()
+				ui.Render(c.execWindow)
+				c.mux.Unlock()
 			}
 		}
 	}()
