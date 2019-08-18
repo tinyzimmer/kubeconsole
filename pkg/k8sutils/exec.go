@@ -20,6 +20,9 @@ func (k *kubeFactory) GetExecutor(ns string, podName string) (exec remotecommand
 	if err != nil {
 		return
 	}
+
+	// if we have multiple containers we should feedback to the terminal
+	// and ask which one
 	targetContainer := pod.Spec.Containers[0]
 
 	req := k.clientset.CoreV1().RESTClient().Post().

@@ -124,6 +124,7 @@ func (c *controller) pollPods() {
 
 		// bring up namespace menu
 		case "n":
+			cancelIfNotNil(logCancel)
 			c.displayNamespaceList()
 			return
 
@@ -159,8 +160,15 @@ func (c *controller) pollPods() {
 
 func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 	c.debug("Polling executor...")
+
+	// redirect all stdin to the terminal,
+	// this is dangerous and the EOF at the end is pretty much all that fully
+	// unblocks us. Could do a switch on ui events, but then we'd need to translate
+	// all control characters and special keys.
 	ctx, cancel := context.WithCancel(context.Background())
 	go asyncCopy(ctx, stdin, os.Stdin)
+
+	// wait for a stop from the exec stream
 	for {
 		select {
 		case <-stch:

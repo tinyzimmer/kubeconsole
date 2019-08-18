@@ -32,9 +32,10 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 	ctx, cancel := context.WithCancel(context.Background())
 	stopch = make(chan struct{})
 
+	// Create pipes for stdin/stdout and a buffer for transferring stdout
+	// to the terminal window
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
-
 	var buf bytes.Buffer
 	go asyncCopy(ctx, &buf, stdoutReader)
 
@@ -43,17 +44,18 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 		for {
 			select {
 			case <-ctx.Done():
+				// stop streaming and signal the poller to stop blocking
 				c.debug("Stopping exec window stream")
 				stopch <- struct{}{}
 				return
 			default:
-				// der be demons that need cleaning here
+				// der be demons that need cleaning here - especiallfor special events
 				out, _ := decode(buf.Bytes())
 				split := strings.Split(strings.Replace(string(out), "\r\n", "\n", -1), "\n")
 				outLength := len(split)
 
-				// some hackery to fit the window - but think i need to go back to a
-				// list implementation.
+				// some hackery to fit the window - but think i need to go back to the
+				// widgets.List implementation.
 				var outStr string
 				if outLength > c.execWindow.Inner.Dy() {
 					min := len(split) - c.execWindow.Inner.Dy() + 4
@@ -69,6 +71,7 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 		}
 	}()
 
+	// Start the actual command
 	opts := remotecommand.StreamOptions{
 		Stdin:  stdinReader,
 		Stdout: stdoutWriter,
