@@ -8,6 +8,10 @@ Node:          {{ .Spec.NodeName }}
 Controlled By: {{ $owner.Kind }}/{{ $owner.Name }}
 {{- end }}
 Created:       {{ .CreationTimestamp }}
+{{- if .Status.ContainerStatuses }}
+{{- $cont := index .Status.ContainerStatuses 0 }}
+Restarts:      {{ $cont.RestartCount }}
+{{- end }}
 
 Status:        {{ .Status.Phase }}
 IP:            {{ .Status.PodIP }}
