@@ -41,7 +41,8 @@ type controller struct {
 	debugChan   chan string
 	errorChan   chan *errorWithStack
 
-	mux sync.Mutex
+	mux       sync.Mutex
+	resizemux sync.Mutex
 }
 
 // New returns a new terminal ui controller
@@ -104,8 +105,8 @@ func (c *controller) renderDefaults() {
 // to switch around the namespace and pod view to get things back to perfect.
 // But at least you don't have to restart.
 func (c *controller) resizeDefaults() {
-	// c.mux.Lock()
-	// defer c.mux.Unlock()
+	c.resizemux.Lock()
+	defer c.resizemux.Unlock()
 	c.navWindow = newNavWindow()
 	c.serverWindow = newAPIServerWindow(c.factory.ApiHost())
 	c.helpWindow = newHelpWindow()
@@ -118,9 +119,17 @@ func (c *controller) resizeDefaults() {
 		c.namespaceList = c.newNamespaceList()
 	}
 
+	consoleBak := c.console.Rows
+	c.console = newConsoleWindow()
+	c.console.Rows = consoleBak
+
 	detailsBak := c.detailsWindow.Text
 	c.detailsWindow, c.detailsChan = newDetailsWindow()
 	c.detailsWindow.Text = detailsBak
+
+	execBak := c.execWindow.Text
+	c.execWindow = newExecWindow()
+	c.execWindow.Text = execBak
 
 	logBak := c.logWindow.Rows
 	c.logWindow, c.logChan = c.newLogWindow()

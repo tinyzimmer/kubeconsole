@@ -10,8 +10,18 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 )
 
-const ctrlC = "<C-c>"
-const enter = "<Enter>"
+const (
+	ctrlC    = "<C-c>"
+	enter    = "<Enter>"
+	up       = "<Up>"
+	down     = "<Down>"
+	left     = "<Left>"
+	right    = "<Right>"
+	pageUp   = "<PageUp>"
+	pageDown = "<PageDown>"
+	home     = "<Home>"
+	end      = "<End>"
+)
 
 var currentNamespace string
 var currentPod string
@@ -39,22 +49,22 @@ func (c *controller) pollNamespaces(ch chan string) {
 			c.pollPods()
 			return
 
-		case "<Down>":
+		case down:
 			c.namespaceList.ScrollDown()
 
-		case "<Up>":
+		case up:
 			c.namespaceList.ScrollUp()
 
-		case "<Home>":
+		case home:
 			c.namespaceList.ScrollTop()
 
-		case "<End>":
+		case end:
 			c.namespaceList.ScrollBottom()
 
-		case "<PageUp>":
+		case pageUp:
 			c.namespaceList.ScrollPageUp()
 
-		case "<PageDown>":
+		case pageDown:
 			c.namespaceList.ScrollPageDown()
 
 		// reload
@@ -104,22 +114,22 @@ func (c *controller) pollPods() {
 			cancelIfNotNil(logCancel)
 			return
 
-		case "<Down>":
+		case down:
 			c.podScroll(focus.ScrollDown)
 
-		case "<Up>":
+		case up:
 			c.podScroll(focus.ScrollUp)
 
-		case "<Home>":
+		case home:
 			c.podScroll(focus.ScrollTop)
 
-		case "<End>":
+		case end:
 			c.podScroll(focus.ScrollBottom)
 
-		case "<PageUp>":
+		case pageUp:
 			c.podScroll(focus.ScrollPageUp)
 
-		case "<PageDown>":
+		case pageDown:
 			c.podScroll(focus.ScrollPageDown)
 
 		// bring up namespace menu
@@ -166,9 +176,6 @@ func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 	c.debug("Polling executor...")
 
 	// redirect all stdin to the terminal,
-	// this is dangerous and the EOF at the end is pretty much all that fully
-	// unblocks us. Could do a switch on ui events, but then we'd need to translate
-	// all control characters and special keys.
 	ctx, cancel := context.WithCancel(context.Background())
 	go asyncCopy(ctx, stdin, os.Stdin)
 
@@ -200,22 +207,22 @@ func (c *controller) pollConsole() {
 		case "q", "<C-c>":
 			return
 
-		case "<Down>":
+		case down:
 			c.console.ScrollDown()
 
-		case "<Up>":
+		case up:
 			c.console.ScrollUp()
 
-		case "<Home>":
+		case home:
 			c.console.ScrollTop()
 
-		case "<End>":
+		case end:
 			c.console.ScrollBottom()
 
-		case "<PageUp>":
+		case pageUp:
 			c.console.ScrollPageUp()
 
-		case "<PageDown>":
+		case pageDown:
 			c.console.ScrollPageDown()
 
 		case "n":
