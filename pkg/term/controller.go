@@ -104,8 +104,8 @@ func (c *controller) renderDefaults() {
 // to switch around the namespace and pod view to get things back to perfect.
 // But at least you don't have to restart.
 func (c *controller) resizeDefaults() {
-	c.mux.Lock()
-	defer c.mux.Unlock()
+	// c.mux.Lock()
+	// defer c.mux.Unlock()
 	c.navWindow = newNavWindow()
 	c.serverWindow = newAPIServerWindow(c.factory.ApiHost())
 	c.helpWindow = newHelpWindow()
