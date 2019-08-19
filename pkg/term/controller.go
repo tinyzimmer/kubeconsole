@@ -30,7 +30,7 @@ type controller struct {
 	detailsWindow *widgets.Paragraph
 	logWindow     *widgets.List
 	console       *widgets.List
-	execWindow    *widgets.Paragraph
+	execWindow    *widgets.List
 	errorWindow   *widgets.Paragraph
 
 	consoleFocused bool
@@ -127,9 +127,9 @@ func (c *controller) resizeDefaults() {
 	c.detailsWindow, c.detailsChan = newDetailsWindow()
 	c.detailsWindow.Text = detailsBak
 
-	execBak := c.execWindow.Text
+	execBak := c.execWindow.Rows
 	c.execWindow = newExecWindow()
-	c.execWindow.Text = execBak
+	c.execWindow.Rows = execBak
 
 	logBak := c.logWindow.Rows
 	c.logWindow, c.logChan = c.newLogWindow()

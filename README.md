@@ -2,6 +2,5 @@
 Terminal Kubernetes Console
 
 TODO
- - Make exec window a list
- - multi-container pods (get, logs, shell)
- - poll for new pods
+ - handle multi-container pods (get, logs, shell) : right now I just let the error surface
+ - poll for new pods in background without needing to push 'r'

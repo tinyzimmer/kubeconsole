@@ -11,6 +11,7 @@ import (
 	"time"
 
 	ui "github.com/gizak/termui/v3"
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 	"k8s.io/client-go/tools/remotecommand"
@@ -49,26 +50,20 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 				stopch <- struct{}{}
 				return
 			default:
+
 				// der be demons that need cleaning here - especiallfor special events
 				out, _ := decode(buf.Bytes())
-				split := strings.Split(strings.Replace(string(out), "\r\n", "\n", -1), "\n")
-				outLength := len(split)
+				stripped := stripAnsi(string(out))
+				split := strings.Split(strings.Replace(stripped, "\r\n", "\n", -1), "\n")
 
-				// some hackery to fit the window - but think i need to go back to the
-				// widgets.List implementation.
-				var outStr string
-				if outLength > c.execWindow.Inner.Dy() {
-					min := len(split) - c.execWindow.Inner.Dy() + 4
-					outStr = strings.Join(split[min:], "\n")
-				} else {
-					outStr = string(out)
+				if !cmp.Equal(c.execWindow.Rows, split) {
+					c.execWindow.Rows = split
+					c.execWindow.ScrollBottom()
+					c.mux.Lock()
+					ui.Render(c.execWindow)
+					c.mux.Unlock()
 				}
-				c.execWindow.Text = stripAnsi(outStr)
-				//c.execWindow.ScrollBottom()
 
-				c.mux.Lock()
-				ui.Render(c.execWindow)
-				c.mux.Unlock()
 			}
 		}
 	}()

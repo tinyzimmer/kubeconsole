@@ -178,8 +178,12 @@ func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 	// redirect all stdin to the terminal,
 	ctx, cancel := context.WithCancel(context.Background())
 	go asyncCopy(ctx, stdin, os.Stdin)
+	//	events := ui.PollEvents()
 
 	// wait for a stop from the exec stream
+	//
+	// I'd like to take more control over the stdin copy and feed back
+	// page events to scroll through the command history
 	for {
 		select {
 		case <-stch:
@@ -187,6 +191,15 @@ func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 			stdin.Close()
 			c.pollPods()
 			return
+		// case e := <-events:
+		// 	switch e.ID {
+		// 	case pageUp:
+		// 		c.execWindow.ScrollPageUp()
+		// 		ui.Render(c.execWindow)
+		// 	case pageDown:
+		// 		c.execWindow.ScrollPageDown()
+		// 		ui.Render(c.execWindow)
+		// 	}
 		default:
 		}
 	}

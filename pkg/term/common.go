@@ -90,14 +90,14 @@ func newConsoleWindow() *widgets.List {
 	return par
 }
 
-func newExecWindow() *widgets.Paragraph {
+func newExecWindow() *widgets.List {
 	//ex := widgets.NewList()
-	ex := widgets.NewParagraph()
+	ex := widgets.NewList()
 	ex.Title = execTitle
 	x, y := ui.TerminalDimensions()
 	ex.SetRect(0, y/2, x, y-3)
 	ex.TextStyle = ui.NewStyle(ui.ColorWhite)
 	ex.WrapText = true
-	//ex.SelectedRowStyle = ui.NewStyle(ui.ColorWhite)
+	ex.SelectedRowStyle = ui.NewStyle(ui.ColorWhite)
 	return ex
 }
