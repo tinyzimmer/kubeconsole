@@ -34,9 +34,10 @@ func (s *server) handleChannel(newChannel ssh.NewChannel) {
 	}
 
 	// start up the console
+	os.Setenv("TERM", "xterm")
 	var console *exec.Cmd
 	if s.incluster {
-		console = exec.Command(os.Args[0], "-c")
+		console = exec.Command(os.Args[0], "-cluster")
 	} else {
 		console = exec.Command(os.Args[0])
 	}

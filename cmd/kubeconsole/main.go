@@ -22,7 +22,7 @@ var serverkey string
 
 func init() {
 
-	flag.BoolVar(&debug, "", false, "Stream console events to debug.log")
+	flag.BoolVar(&debug, "d", false, "Stream console events to debug.log")
 	flag.BoolVar(&listen, "listen", false, "Start SSH Server for remote connections")
 	flag.StringVar(&serverkey, "keyfile", "", `A pre-generated server key file for SSH
 		If you do not supply this, one will be generated`)
