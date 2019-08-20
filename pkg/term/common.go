@@ -2,6 +2,7 @@ package term
 
 import (
 	"fmt"
+	"strings"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
@@ -14,7 +15,7 @@ const (
 	detailsTitle = " Details "
 	logTitle     = " Logs "
 	helpTitle    = " Help "
-	helpText     = "'q' quit  'r' refresh  'e' exec/pod  <tab> switch panes"
+	helpText     = "'q' quit | 'r' refresh | 'e' exec/pod | 't' tail logs | <tab> switch panes"
 	consoleTitle = " Console "
 	execTitle    = " Exec  Ctrl-D to exit "
 	errorTitle   = "ERROR"
@@ -60,9 +61,9 @@ func newHelpWindow() *widgets.Paragraph {
 	return par
 }
 
-func newDetailsWindow() (*widgets.Paragraph, chan string) {
+func newDetailsWindow() (*widgets.List, chan string) {
 	ch := make(chan string)
-	par := widgets.NewParagraph()
+	par := widgets.NewList()
 	par.Title = detailsTitle
 	par.WrapText = false
 	x, y := ui.TerminalDimensions()
@@ -71,7 +72,9 @@ func newDetailsWindow() (*widgets.Paragraph, chan string) {
 		for {
 			select {
 			case ev := <-ch:
-				par.Text = ev
+				rows := strings.Split(ev, "\n")
+				par.Rows = rows
+				par.ScrollTop()
 				ui.Render(par)
 			}
 		}

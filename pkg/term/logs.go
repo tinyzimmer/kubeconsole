@@ -3,6 +3,7 @@ package term
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -43,6 +44,35 @@ func (c *controller) newLogWindow() (*widgets.List, chan string) {
 		}
 	}()
 	return logs, ch
+}
+
+func (c *controller) tailPod() {
+	if empty(c.podList) {
+		return
+	}
+	podName := c.getSelectedPod()
+	pod, err := c.factory.GetPod(c.currentNamespace, podName)
+	if err != nil {
+		c.errorChan <- newErrorWithStack(err)
+		return
+	}
+	if len(pod.Spec.Containers) == 1 {
+		c.startLogStream(podName, "")
+	}
+}
+
+func (c *controller) startLogStream(pod, container string) {
+	c.resetLogWindow()
+	logsPaused = false
+	c.logChan <- clearEvent
+	c.logChan <- fmt.Sprintf("Fetching logs for %s...\n", pod)
+	if stream, err := c.factory.GetLogStream(c.currentNamespace, pod, container, logContext); err != nil {
+		c.errorChan <- newErrorWithStack(err)
+		return
+	} else {
+		c.debug(fmt.Sprintf("Starting log stream for %s", pod))
+		go c.streamLogsToWindow(logContext, stream)
+	}
 }
 
 func (c *controller) streamLogsToWindow(ctx context.Context, stream io.ReadCloser) {

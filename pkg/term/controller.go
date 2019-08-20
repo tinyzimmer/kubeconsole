@@ -27,11 +27,13 @@ type controller struct {
 	serverWindow  *widgets.Paragraph
 	namespaceList *widgets.List
 	podList       *widgets.List
-	detailsWindow *widgets.Paragraph
+	detailsWindow *widgets.List
 	logWindow     *widgets.List
 	console       *widgets.List
 	execWindow    *widgets.List
 	errorWindow   *widgets.Paragraph
+
+	currentNamespace string
 
 	consoleFocused bool
 	debugToFile    bool
@@ -113,8 +115,8 @@ func (c *controller) resizeDefaults() {
 
 	ch := make(chan string)
 	c.podList = c.newPodList(ch)
-	if currentNamespace != "" {
-		ch <- currentNamespace
+	if c.currentNamespace != "" {
+		ch <- c.currentNamespace
 	} else {
 		c.namespaceList = c.newNamespaceList()
 	}
@@ -123,9 +125,9 @@ func (c *controller) resizeDefaults() {
 	c.console = newConsoleWindow()
 	c.console.Rows = consoleBak
 
-	detailsBak := c.detailsWindow.Text
+	detailsBak := c.detailsWindow.Rows
 	c.detailsWindow, c.detailsChan = newDetailsWindow()
-	c.detailsWindow.Text = detailsBak
+	c.detailsWindow.Rows = detailsBak
 
 	execBak := c.execWindow.Rows
 	c.execWindow = newExecWindow()
@@ -137,7 +139,7 @@ func (c *controller) resizeDefaults() {
 
 	ui.Clear()
 	c.renderDefaults()
-	if currentNamespace == "" {
+	if c.currentNamespace == "" {
 		c.renderNamespaceList()
 	}
 }

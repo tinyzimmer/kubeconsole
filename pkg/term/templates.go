@@ -1,11 +1,12 @@
 package term
 
-var podDetailsTemplate = `Name:          {{ .Name }}
+const podDetailsTemplate = `Name:          {{ .Name }}
 Namespace:     {{ .Namespace }}
 Node:          {{ .Spec.NodeName }}
 {{- if .OwnerReferences }}
-{{- $owner := index .OwnerReferences 0 }}
+{{- range $idx, $owner := .OwnerReferences }}
 Controlled By: {{ $owner.Kind }}/{{ $owner.Name }}
+{{- end }}
 {{- end }}
 Created:       {{ .CreationTimestamp }}
 {{- if .Status.ContainerStatuses }}
@@ -25,6 +26,5 @@ Containers:
          {{ range $k, $v := $container.Env -}}
            {{ $v.Name }}: {{ $v.Value }}
          {{ end -}}
-
 {{ end -}}
 `

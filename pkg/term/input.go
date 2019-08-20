@@ -23,8 +23,6 @@ const (
 	end      = "<End>"
 )
 
-var currentNamespace string
-var currentPod string
 var logContext context.Context
 var logCancel func()
 var focus *widgets.List
@@ -81,12 +79,12 @@ func (c *controller) pollNamespaces(ch chan string) {
 
 		// load pods for selcted namespace
 		case enter:
-			currentNamespace = c.namespaceList.Rows[c.namespaceList.SelectedRow]
-			ch <- currentNamespace
+			c.currentNamespace = c.namespaceList.Rows[c.namespaceList.SelectedRow]
+			ch <- c.currentNamespace
 			c.navWindow.FocusRight()
 			ui.Clear()
 			c.renderDefaults()
-			c.debug(fmt.Sprintf("Fetching pods for %s", currentNamespace))
+			c.debug(fmt.Sprintf("Fetching pods for %s", c.currentNamespace))
 			c.pollPods()
 			return
 		}
@@ -107,30 +105,30 @@ func (c *controller) pollPods() {
 		case "r":
 			ch := make(chan string)
 			c.podList = c.newPodList(ch)
-			ch <- currentNamespace
+			ch <- c.currentNamespace
 
-			// quit
+		// quit
 		case "q", ctrlC:
 			cancelIfNotNil(logCancel)
 			return
 
 		case down:
-			c.podScroll(focus.ScrollDown)
+			c.focusScroll(focus, down)
 
 		case up:
-			c.podScroll(focus.ScrollUp)
+			c.focusScroll(focus, up)
 
 		case home:
-			c.podScroll(focus.ScrollTop)
+			c.focusScroll(focus, home)
 
 		case end:
-			c.podScroll(focus.ScrollBottom)
+			c.focusScroll(focus, end)
 
 		case pageUp:
-			c.podScroll(focus.ScrollPageUp)
+			c.focusScroll(focus, pageUp)
 
 		case pageDown:
-			c.podScroll(focus.ScrollPageDown)
+			c.focusScroll(focus, pageDown)
 
 		// bring up namespace menu
 		case "n":
@@ -146,18 +144,20 @@ func (c *controller) pollPods() {
 		case "c":
 			cancelIfNotNil(logCancel)
 			c.navWindow.FocusRight()
-
 			c.mux.Lock()
 			ui.Render(c.navWindow, c.console)
 			c.mux.Unlock()
-
 			c.pollConsole()
 			return
 
-		// get pod details and stream logs
-		case enter:
+			// tail pod logs
+		case "t":
 			cancelIfNotNil(logCancel)
 			logContext, logCancel = context.WithCancel(context.Background())
+			c.tailPod()
+
+		// get pod details
+		case enter:
 			c.debug("Loading pod...")
 			c.selectPod()
 

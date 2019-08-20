@@ -18,8 +18,8 @@ import (
 )
 
 func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan struct{}) {
-	currentPod = c.podList.Rows[c.podList.SelectedRow]
-	exec, err := c.factory.GetExecutor(currentNamespace, currentPod)
+	currentPod := c.getSelectedPod()
+	exec, err := c.factory.GetExecutor(c.currentNamespace, currentPod)
 	// var (
 	// 	stdin  bytes.Buffer
 	// 	stdout bytes.Buffer

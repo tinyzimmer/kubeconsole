@@ -27,7 +27,7 @@ type KubernetesFactory interface {
 	ListPods(string) ([]string, error)
 
 	GetPod(string, string) (*corev1.Pod, error)
-	GetLogStream(string, string, context.Context) (io.ReadCloser, error)
+	GetLogStream(string, string, string, context.Context) (io.ReadCloser, error)
 	GetExecutor(string, string) (remotecommand.Executor, error)
 }
 

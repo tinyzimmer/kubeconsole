@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 )
 
 type errorWithStack struct {
@@ -27,10 +28,35 @@ func (e *errorWithStack) Stack() string {
 	return e.errStack
 }
 
-func (c *controller) podScroll(f func()) {
-	c.setupIfLogWindow()
-	if len(focus.Rows) > 0 {
-		f()
+func (c *controller) focusScroll(focus *widgets.List, direction string) {
+	switch direction {
+
+	case up:
+		if focus == c.detailsWindow {
+			focus.ScrollPageUp()
+		} else {
+			focus.ScrollUp()
+		}
+
+	case down:
+		if focus == c.detailsWindow {
+			focus.ScrollPageDown()
+		} else {
+			focus.ScrollDown()
+		}
+
+	case pageUp:
+		focus.ScrollPageUp()
+
+	case pageDown:
+		focus.ScrollPageDown()
+
+	case home:
+		focus.ScrollTop()
+
+	case end:
+		focus.ScrollBottom()
+
 	}
 }
 
@@ -60,8 +86,8 @@ func newErrorWithStack(err error) (serr *errorWithStack) {
 	return serr
 }
 
-func (c *controller) getPodDetails() {
-	details, err := c.factory.GetPod(currentNamespace, currentPod)
+func (c *controller) getPodDetails(pod string) {
+	details, err := c.factory.GetPod(c.currentNamespace, pod)
 	if err != nil {
 		c.errorChan <- newErrorWithStack(err)
 	} else {
@@ -77,27 +103,20 @@ func (c *controller) getPodDetails() {
 }
 
 func (c *controller) selectPod() {
-	c.resetLogWindow()
-	logsPaused = false
-	if len(c.podList.Rows) > 0 {
-		currentPod = c.podList.Rows[c.podList.SelectedRow]
-		c.debug(fmt.Sprintf("Fetching details for %s", currentPod))
-		c.detailsChan <- fmt.Sprintf("Loading details for %s...\n", currentPod)
-		c.logChan <- clearEvent
-		c.logChan <- fmt.Sprintf("Fetching logs for %s...\n", currentPod)
-		if stream, err := c.factory.GetLogStream(currentNamespace, currentPod, logContext); err != nil {
-			c.errorChan <- newErrorWithStack(err)
-		} else {
-			c.debug(fmt.Sprintf("Starting log stream for %s", currentPod))
-			go c.streamLogsToWindow(logContext, stream)
-		}
-		go c.getPodDetails()
+	if empty(c.podList) {
+		return
 	}
+	pod := c.getSelectedPod()
+	c.debug(fmt.Sprintf("Fetching details for %s", pod))
+	c.detailsChan <- fmt.Sprintf("Loading details for %s...\n", pod)
+	go c.getPodDetails(pod)
 }
 
 func (c *controller) switchPane() {
 	focus.Title = strings.Replace(focus.Title, " * ", "", 1)
 	if focus == c.podList {
+		focus = c.detailsWindow
+	} else if focus == c.detailsWindow {
 		focus = c.logWindow
 	} else {
 		focus = c.podList
@@ -125,6 +144,21 @@ func (c *controller) displayNamespaceList() {
 	}()
 	c.pollNamespaces(ch)
 	return
+}
+
+func (c *controller) getSelectedPod() string {
+	if empty(c.podList) {
+		return ""
+	}
+	return c.podList.Rows[c.podList.SelectedRow]
+}
+
+func empty(s *widgets.List) bool {
+	return len(s.Rows) == 0
+}
+
+func notEmpty(s *widgets.List) bool {
+	return len(s.Rows) != 0
 }
 
 type readerFunc func(p []byte) (n int, err error)
