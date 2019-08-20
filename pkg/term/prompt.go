@@ -6,6 +6,8 @@ import (
 )
 
 func (c *controller) choicePrompt(title string, choices []string) (sel string) {
+	ui.Clear()
+	c.renderDefaults()
 	prompt := widgets.NewList()
 	prompt.Title = title
 	prompt.Rows = choices
@@ -21,9 +23,11 @@ func (c *controller) choicePrompt(title string, choices []string) (sel string) {
 		switch e.ID {
 		case enter:
 			return prompt.Rows[prompt.SelectedRow]
+		case "<Escape>":
+			return _cancel
 		default:
-			if q := c.checkCommon(prompt, e.ID); q == quit {
-				return quit
+			if q := c.checkCommon(prompt, e.ID); q == _quit {
+				return _quit
 			}
 		}
 	}

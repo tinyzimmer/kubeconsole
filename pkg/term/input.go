@@ -22,7 +22,8 @@ const (
 	home     = "<Home>"
 	end      = "<End>"
 
-	quit = "QUIT"
+	_quit   = "QUIT"
+	_cancel = "CANCEL"
 )
 
 var logContext context.Context
@@ -34,7 +35,7 @@ func (c *controller) checkCommon(focus *widgets.List, event string) (q string) {
 	switch event {
 	// quit
 	case "q", ctrlC:
-		return quit
+		return _quit
 
 	case down:
 		c.focusScroll(focus, down)
@@ -65,7 +66,7 @@ func (c *controller) pollNamespaces(ch chan string) {
 		switch e.ID {
 
 		// switch to pod view
-		case "p":
+		case "p", "<Escape>":
 			c.navWindow.FocusRight()
 			ui.Clear()
 			c.pollPods()
@@ -83,6 +84,32 @@ func (c *controller) pollNamespaces(ch chan string) {
 			c.pollConsole()
 			return
 
+		case "s":
+			ctxs, err := c.factory.AvailableContexts()
+			if err != nil {
+				c.errorChan <- newErrorWithStack(err)
+				continue
+			}
+			ctx := c.choicePrompt("Which context?", ctxs)
+			if ctx == _quit {
+				return
+			} else if ctx == _cancel {
+				continue
+			}
+			c.debug(fmt.Sprintf("Switching to context '%s'", ctx))
+			err = c.factory.SwitchContext(ctx)
+			if err != nil {
+				c.errorChan <- newErrorWithStack(err)
+				continue
+			}
+			c.namespaceList = c.newNamespaceList()
+			c.serverWindow = newAPIServerWindow(c.factory.APIHost())
+			c.renderDefaults()
+			c.renderNamespaceList()
+			// we need to start a new poller that doesn't have the enter
+			// from the choice prompt
+			uiEvents = ui.PollEvents()
+
 		// load pods for selcted namespace
 		case enter:
 			c.currentNamespace = c.getSelectedNamespace()
@@ -95,7 +122,7 @@ func (c *controller) pollNamespaces(ch chan string) {
 			return
 
 		default:
-			if q := c.checkCommon(c.namespaceList, e.ID); q == quit {
+			if q := c.checkCommon(c.namespaceList, e.ID); q == _quit {
 				cancelIfNotNil(logCancel)
 				return
 			}
@@ -143,7 +170,7 @@ func (c *controller) pollPods() {
 		case "t":
 			cancelIfNotNil(logCancel)
 			logContext, logCancel = context.WithCancel(context.Background())
-			if q := c.tailPod(); q == quit {
+			if q := c.tailPod(); q == _quit {
 				cancelIfNotNil(logCancel)
 				return
 			}
@@ -156,14 +183,15 @@ func (c *controller) pollPods() {
 		case "e":
 			cancelIfNotNil(logCancel)
 			stdin, stopch, q := c.RunExecutor()
-			if q == quit {
+			if q == _quit {
+				return
+			} else if q != _cancel {
+				c.pollExecutor(stdin, stopch)
 				return
 			}
-			c.pollExecutor(stdin, stopch)
-			return
 
 		default:
-			if q := c.checkCommon(focus, e.ID); q == quit {
+			if q := c.checkCommon(focus, e.ID); q == _quit {
 				cancelIfNotNil(logCancel)
 				return
 			}
@@ -177,6 +205,7 @@ func (c *controller) pollExecutor(stdin *io.PipeWriter, stch chan struct{}) {
 
 	// redirect all stdin to the terminal,
 	ctx, cancel := context.WithCancel(context.Background())
+
 	go asyncCopy(ctx, stdin, os.Stdin)
 	//	events := ui.PollEvents()
 
@@ -229,7 +258,7 @@ func (c *controller) pollConsole() {
 			return
 
 		default:
-			if q := c.checkCommon(c.console, e.ID); q == quit {
+			if q := c.checkCommon(c.console, e.ID); q == _quit {
 				return
 			}
 		}

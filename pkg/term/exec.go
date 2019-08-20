@@ -34,8 +34,8 @@ func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan stru
 			containerNames = append(containerNames, cont.Name)
 		}
 		container = c.choicePrompt(" Which container to exec into? ", containerNames)
-		if container == quit {
-			q = quit
+		if container == _quit || container == _cancel {
+			q = container
 			return
 		}
 		c.renderDefaults()

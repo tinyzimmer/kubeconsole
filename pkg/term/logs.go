@@ -65,8 +65,8 @@ func (c *controller) tailPod() (q string) {
 			containerNames = append(containerNames, container.Name)
 		}
 		choice := c.choicePrompt(" Which container to tail? ", containerNames)
-		if choice == quit {
-			return quit
+		if choice == _quit || choice == _cancel {
+			return choice
 		}
 		c.startLogStream(podName, choice)
 	}
@@ -79,13 +79,13 @@ func (c *controller) startLogStream(pod, container string) {
 	logsPaused = false
 	c.logChan <- clearEvent
 	c.logChan <- fmt.Sprintf("Fetching logs for %s...\n", pod)
-	if stream, err := c.factory.GetLogStream(c.currentNamespace, pod, container, logContext); err != nil {
+	stream, err := c.factory.GetLogStream(c.currentNamespace, pod, container, logContext)
+	if err != nil {
 		c.errorChan <- newErrorWithStack(err)
 		return
-	} else {
-		c.debug(fmt.Sprintf("Retrieved log stream for %s, begining sync to window", pod))
-		go c.streamLogsToWindow(logContext, stream)
 	}
+	c.debug(fmt.Sprintf("Retrieved log stream for %s, begining sync to window", pod))
+	go c.streamLogsToWindow(logContext, stream)
 }
 
 func (c *controller) streamLogsToWindow(ctx context.Context, stream io.ReadCloser) {

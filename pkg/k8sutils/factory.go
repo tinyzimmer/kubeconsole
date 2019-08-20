@@ -2,11 +2,14 @@ package k8sutils
 
 import (
 	"context"
+	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -19,9 +22,11 @@ type KubernetesFactory interface {
 	BuildConfigFromFlags(string, string) (*rest.Config, error)
 	NewForConfig(*rest.Config) (*kubernetes.Clientset, error)
 
+	AvailableContexts() ([]string, error)
+	SwitchContext(string) error
 	CreateClientSet() error
 
-	ApiHost() string
+	APIHost() string
 
 	ListNamespaces() ([]string, error)
 	ListPods(string) ([]string, error)
@@ -29,6 +34,15 @@ type KubernetesFactory interface {
 	GetPod(string, string) (*corev1.Pod, error)
 	GetLogStream(string, string, string, context.Context) (io.ReadCloser, error)
 	GetExecutor(string, string, string) (remotecommand.Executor, error)
+}
+
+type kubeContexts struct {
+	Contexts []kubeContext `yaml:"contexts"`
+}
+
+type kubeContext struct {
+	Ctx  map[string]string `yaml:"context"`
+	Name string            `yaml:"name"`
 }
 
 type CoreV1 interface {
@@ -45,20 +59,22 @@ type kubeFactory struct {
 	podsFunc        func(CoreV1, string) v1.PodInterface
 	namespacesFunc  func(CoreV1) v1.NamespaceInterface
 
+	incluster bool
 	conf      *rest.Config
 	clientset *kubernetes.Clientset
 }
 
-func New() KubernetesFactory {
+func New(incluster bool) KubernetesFactory {
 	return &kubeFactory{
 		buildConfigFunc: clientcmd.BuildConfigFromFlags,
 		newClientFunc:   kubernetes.NewForConfig,
 		podsFunc:        CoreV1.Pods,
 		namespacesFunc:  CoreV1.Namespaces,
+		incluster:       incluster,
 	}
 }
 
-func (k *kubeFactory) BuildConfigFromFlags(url string, kpath string) (*rest.Config, error) {
+func (k *kubeFactory) BuildConfigFromFlags(url, kpath string) (*rest.Config, error) {
 	return k.buildConfigFunc(url, kpath)
 }
 
@@ -74,17 +90,67 @@ func (k *kubeFactory) Namespaces(c CoreV1) (iface v1.NamespaceInterface) {
 	return k.namespacesFunc(c)
 }
 
-func (k *kubeFactory) ApiHost() string {
+func (k *kubeFactory) APIHost() string {
 	return k.conf.Host
 }
 
 func (k *kubeFactory) CreateClientSet() (err error) {
-	k.conf, err = k.BuildConfigFromFlags("", getKubeConfig())
+	if k.incluster {
+		k.conf, err = rest.InClusterConfig()
+	} else {
+		k.conf, err = k.BuildConfigFromFlags("", getKubeConfig())
+	}
 	if err != nil {
 		return
 	}
 	k.clientset, err = k.NewForConfig(k.conf)
 	return
+}
+
+func (k *kubeFactory) AvailableContexts() (contexts []string, err error) {
+	if k.incluster {
+		err = errors.New("Context switching not available with in-cluster config")
+		return
+	}
+	var ctxs kubeContexts
+	conf := getKubeConfig()
+	if _, err := os.Stat(conf); err == nil {
+		file, err := os.Open(conf)
+		if err != nil {
+			return nil, err
+		}
+		body, err := ioutil.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
+		err = yaml.Unmarshal(body, &ctxs)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+	for _, c := range ctxs.Contexts {
+		contexts = append(contexts, c.Name)
+	}
+	return
+}
+
+func (k *kubeFactory) SwitchContext(ctx string) (err error) {
+	k.conf, err = buildConfigWithContext(ctx, getKubeConfig())
+	if err != nil {
+		return
+	}
+	k.clientset, err = k.NewForConfig(k.conf)
+	return
+}
+
+func buildConfigWithContext(context, kubeconfig string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
 }
 
 func getKubeConfig() (config string) {

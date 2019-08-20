@@ -15,7 +15,7 @@ const (
 	detailsTitle = " Details "
 	logTitle     = " Logs "
 	helpTitle    = " Help "
-	helpText     = "'q' quit | 'r' refresh | 'e' exec/pod | 't' tail logs | <tab> switch panes"
+	helpText     = "<q>uit | <r>efresh | <e>xec/pod | <t>ail logs | <s>witch context | <tab> switch panes"
 	consoleTitle = " Console "
 	execTitle    = " Exec  Ctrl-D to exit "
 	errorTitle   = "ERROR"
