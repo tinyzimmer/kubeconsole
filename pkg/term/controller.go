@@ -54,7 +54,7 @@ func New(factory k8sutils.KubernetesFactory, debug bool) Controller {
 	c.errorChan = make(chan *errorWithStack)
 	c.debugChan = make(chan string)
 	c.navWindow = newNavWindow(c.debugToFile)
-	c.serverWindow = newAPIServerWindow(factory.APIHost())
+	c.serverWindow = c.newAPIServerWindow()
 	c.helpWindow = newHelpWindow()
 	c.detailsWindow, c.detailsChan = newDetailsWindow()
 	c.logWindow, c.logChan = c.newLogWindow()
@@ -110,7 +110,7 @@ func (c *controller) resizeDefaults() {
 	c.resizemux.Lock()
 	defer c.resizemux.Unlock()
 	c.navWindow = newNavWindow(c.debugToFile)
-	c.serverWindow = newAPIServerWindow(c.factory.APIHost())
+	c.serverWindow = c.newAPIServerWindow()
 	c.helpWindow = newHelpWindow()
 
 	ch := make(chan string)

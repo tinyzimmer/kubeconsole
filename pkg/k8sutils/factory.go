@@ -27,6 +27,7 @@ type KubernetesFactory interface {
 	CreateClientSet() error
 
 	APIHost() string
+	APIVersion() (string, error)
 
 	ListNamespaces() ([]string, error)
 	ListPods(string) ([]string, error)
@@ -92,6 +93,15 @@ func (k *kubeFactory) Namespaces(c CoreV1) (iface v1.NamespaceInterface) {
 
 func (k *kubeFactory) APIHost() string {
 	return k.conf.Host
+}
+
+func (k *kubeFactory) APIVersion() (version string, err error) {
+	vers, err := k.clientset.Discovery().ServerVersion()
+	if err != nil {
+		return
+	}
+	version = vers.String()
+	return
 }
 
 func (k *kubeFactory) CreateClientSet() (err error) {

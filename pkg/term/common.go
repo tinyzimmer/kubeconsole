@@ -11,7 +11,7 @@ import (
 const (
 	mainTitle    = " Kubeconsole "
 	serverTitle  = " Server "
-	serverFormat = "Connected to: %s"
+	serverFormat = "Connected to: %s  Version: %s"
 	detailsTitle = " Details "
 	logTitle     = " Logs "
 	helpTitle    = " Help "
@@ -45,10 +45,14 @@ func newNavWindow(debug bool) *widgets.TabPane {
 	return pane
 }
 
-func newAPIServerWindow(host string) *widgets.Paragraph {
+func (c *controller) newAPIServerWindow() *widgets.Paragraph {
+	version, err := c.factory.APIVersion()
+	if err != nil {
+		version = "n/a"
+	}
 	pane := widgets.NewParagraph()
 	pane.Title = serverTitle
-	pane.Text = fmt.Sprintf(serverFormat, host)
+	pane.Text = fmt.Sprintf(serverFormat, c.factory.APIHost(), version)
 	pane.TextStyle = ui.NewStyle(ui.ColorGreen)
 	x, _ := ui.TerminalDimensions()
 	pane.SetRect(x/2, 0, x, 3)

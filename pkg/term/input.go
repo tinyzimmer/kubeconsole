@@ -103,7 +103,7 @@ func (c *controller) pollNamespaces(ch chan string) {
 				continue
 			}
 			c.namespaceList = c.newNamespaceList()
-			c.serverWindow = newAPIServerWindow(c.factory.APIHost())
+			c.serverWindow = c.newAPIServerWindow()
 			c.renderDefaults()
 			c.renderNamespaceList()
 			// we need to start a new poller that doesn't have the enter
