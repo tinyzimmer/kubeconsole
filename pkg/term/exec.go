@@ -17,13 +17,33 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan struct{}) {
+func (c *controller) RunExecutor() (stdinWriter *io.PipeWriter, stopch chan struct{}, q string) {
 	currentPod := c.getSelectedPod()
-	exec, err := c.factory.GetExecutor(c.currentNamespace, currentPod)
-	// var (
-	// 	stdin  bytes.Buffer
-	// 	stdout bytes.Buffer
-	// )
+
+	// see if we have multiple containers first
+	pod, err := c.factory.GetPod(c.currentNamespace, currentPod)
+	if err != nil {
+		c.errorChan <- newErrorWithStack(err)
+		return
+	}
+
+	var container string
+	if len(pod.Spec.Containers) > 1 {
+		containerNames := make([]string, 0)
+		for _, cont := range pod.Spec.Containers {
+			containerNames = append(containerNames, cont.Name)
+		}
+		container = c.choicePrompt(" Which container to exec into? ", containerNames)
+		if container == quit {
+			q = quit
+			return
+		}
+		c.renderDefaults()
+	} else {
+		container = pod.Spec.Containers[0].Name
+	}
+
+	exec, err := c.factory.GetExecutor(c.currentNamespace, currentPod, container)
 
 	if err != nil {
 		c.errorChan <- newErrorWithStack(err)

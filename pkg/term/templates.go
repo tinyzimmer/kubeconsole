@@ -8,14 +8,14 @@ Node:          {{ .Spec.NodeName }}
 Controlled By: {{ $owner.Kind }}/{{ $owner.Name }}
 {{- end }}
 {{- end }}
-Created:       {{ .CreationTimestamp }}
+Start Time:    {{ .CreationTimestamp }}
+
+IP:            {{ .Status.PodIP }}
+Status:        {{ .Status.Phase }}
 {{- if .Status.ContainerStatuses }}
 {{- $cont := index .Status.ContainerStatuses 0 }}
 Restarts:      {{ $cont.RestartCount }}
 {{- end }}
-
-Status:        {{ .Status.Phase }}
-IP:            {{ .Status.PodIP }}
 
 Containers:
 {{- range $idx, $container := .Spec.Containers }}

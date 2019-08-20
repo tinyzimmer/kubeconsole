@@ -29,6 +29,9 @@ func (e *errorWithStack) Stack() string {
 }
 
 func (c *controller) focusScroll(focus *widgets.List, direction string) {
+	if empty(focus) {
+		return
+	}
 	switch direction {
 
 	case up:
@@ -151,6 +154,10 @@ func (c *controller) getSelectedPod() string {
 		return ""
 	}
 	return c.podList.Rows[c.podList.SelectedRow]
+}
+
+func (c *controller) getSelectedNamespace() string {
+	return c.namespaceList.Rows[c.namespaceList.SelectedRow]
 }
 
 func empty(s *widgets.List) bool {

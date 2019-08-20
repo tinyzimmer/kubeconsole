@@ -33,6 +33,7 @@ func (c *controller) newNamespaceList() (l *widgets.List) {
 	go func() {
 		select {
 		case newRows := <-rowChan:
+			c.debug("Retrieved namespace list, writing to console")
 			l.Rows = newRows
 			c.mux.Lock()
 			ui.Render(l)
@@ -58,6 +59,7 @@ func (c *controller) newPodList(ch chan string) (l *widgets.List) {
 		for {
 			select {
 			case selection := <-ch:
+				c.debug(fmt.Sprintf("Got namespace selection, fetching pods for %s", selection))
 				l.Rows = []string{podsLoading}
 				ui.Render(l)
 				rows, err := c.factory.ListPods(selection)
@@ -68,6 +70,7 @@ func (c *controller) newPodList(ch chan string) (l *widgets.List) {
 				l.Title = fmt.Sprintf(" %s   Namespace: %s ", podsTitle, selection)
 				l.Rows = rows
 
+				c.debug("Rendering pod list")
 				c.mux.Lock()
 				ui.Render(l)
 				c.mux.Unlock()

@@ -46,7 +46,7 @@ func (c *controller) newLogWindow() (*widgets.List, chan string) {
 	return logs, ch
 }
 
-func (c *controller) tailPod() {
+func (c *controller) tailPod() (q string) {
 	if empty(c.podList) {
 		return
 	}
@@ -58,10 +58,23 @@ func (c *controller) tailPod() {
 	}
 	if len(pod.Spec.Containers) == 1 {
 		c.startLogStream(podName, "")
+	} else {
+		//c.errorChan <- newErrorWithStack(errors.New("Multi-container pods not yet supported"))
+		containerNames := make([]string, 0)
+		for _, container := range pod.Spec.Containers {
+			containerNames = append(containerNames, container.Name)
+		}
+		choice := c.choicePrompt(" Which container to tail? ", containerNames)
+		if choice == quit {
+			return quit
+		}
+		c.startLogStream(podName, choice)
 	}
+	return
 }
 
 func (c *controller) startLogStream(pod, container string) {
+	c.debug(fmt.Sprintf("Starting log stream for pod: %s  container: %s", pod, container))
 	c.resetLogWindow()
 	logsPaused = false
 	c.logChan <- clearEvent
@@ -70,7 +83,7 @@ func (c *controller) startLogStream(pod, container string) {
 		c.errorChan <- newErrorWithStack(err)
 		return
 	} else {
-		c.debug(fmt.Sprintf("Starting log stream for %s", pod))
+		c.debug(fmt.Sprintf("Retrieved log stream for %s, begining sync to window", pod))
 		go c.streamLogsToWindow(logContext, stream)
 	}
 }

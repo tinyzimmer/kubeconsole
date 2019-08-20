@@ -34,9 +34,12 @@ func newErrorWindow() *widgets.Paragraph {
 	return pane
 }
 
-func newNavWindow() *widgets.TabPane {
+func newNavWindow(debug bool) *widgets.TabPane {
 	pane := widgets.NewTabPane(tabPanes...)
 	pane.Title = mainTitle
+	if debug {
+		pane.Title = fmt.Sprintf("%s - DEBUGGING TO FILE ", pane.Title)
+	}
 	x, _ := ui.TerminalDimensions()
 	pane.SetRect(0, 0, x/2, 3)
 	return pane

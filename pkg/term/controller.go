@@ -50,9 +50,10 @@ type controller struct {
 // New returns a new terminal ui controller
 func New(factory k8sutils.KubernetesFactory, debug bool) Controller {
 	c := &controller{factory: factory}
+	c.debugToFile = debug
 	c.errorChan = make(chan *errorWithStack)
 	c.debugChan = make(chan string)
-	c.navWindow = newNavWindow()
+	c.navWindow = newNavWindow(c.debugToFile)
 	c.serverWindow = newAPIServerWindow(factory.ApiHost())
 	c.helpWindow = newHelpWindow()
 	c.detailsWindow, c.detailsChan = newDetailsWindow()
@@ -60,7 +61,6 @@ func New(factory k8sutils.KubernetesFactory, debug bool) Controller {
 	c.console = newConsoleWindow()
 	c.execWindow = newExecWindow()
 	c.errorWindow = newErrorWindow()
-	c.debugToFile = debug
 	return c
 }
 
@@ -109,7 +109,7 @@ func (c *controller) renderDefaults() {
 func (c *controller) resizeDefaults() {
 	c.resizemux.Lock()
 	defer c.resizemux.Unlock()
-	c.navWindow = newNavWindow()
+	c.navWindow = newNavWindow(c.debugToFile)
 	c.serverWindow = newAPIServerWindow(c.factory.ApiHost())
 	c.helpWindow = newHelpWindow()
 
@@ -146,6 +146,7 @@ func (c *controller) resizeDefaults() {
 
 // just render the namespace prompt
 func (c *controller) renderNamespaceList() {
+	c.debug("Rendering namespace list")
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	ui.Render(c.namespaceList)
@@ -160,13 +161,14 @@ func (c *controller) renderConsole() {
 
 // reset the Log Window
 func (c *controller) resetLogWindow() {
+	c.debug("Resetting log window")
 	c.logWindow, c.logChan = c.newLogWindow()
 }
 
 // listen on the error channel and bring up a prompt when
 // any get raised
 func (c *controller) listenForErrors() {
-
+	c.debug("Starting error listener")
 	for {
 		select {
 		case err := <-c.errorChan:
@@ -190,17 +192,21 @@ func (c *controller) debug(msg string) {
 		c.renderConsole()
 	}
 	if c.debugToFile {
-		f, err := os.OpenFile("debug.log",
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			c.errorChan <- newErrorWithStack(err)
-			return
-		}
-		defer f.Close()
-		if _, err := f.WriteString(fmt.Sprintf("%s\n", newMsg)); err != nil {
-			c.errorChan <- newErrorWithStack(err)
-			return
-		}
+		c.appendDebugFile(newMsg)
+	}
+}
+
+func (c *controller) appendDebugFile(msg string) {
+	f, err := os.OpenFile("debug.log",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		c.errorChan <- newErrorWithStack(err)
+		return
+	}
+	defer f.Close()
+	if _, err := f.WriteString(fmt.Sprintf("%s\n", msg)); err != nil {
+		c.errorChan <- newErrorWithStack(err)
+		return
 	}
 }
 

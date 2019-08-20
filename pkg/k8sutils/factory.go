@@ -28,7 +28,7 @@ type KubernetesFactory interface {
 
 	GetPod(string, string) (*corev1.Pod, error)
 	GetLogStream(string, string, string, context.Context) (io.ReadCloser, error)
-	GetExecutor(string, string) (remotecommand.Executor, error)
+	GetExecutor(string, string, string) (remotecommand.Executor, error)
 }
 
 type CoreV1 interface {

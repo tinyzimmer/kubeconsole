@@ -15,25 +15,16 @@ type AttachOptions struct {
 	Namespace string
 }
 
-func (k *kubeFactory) GetExecutor(ns string, podName string) (exec remotecommand.Executor, err error) {
-	pod, err := k.GetPod(ns, podName)
-	if err != nil {
-		return
-	}
-
-	// if we have multiple containers we should feedback to the terminal
-	// and ask which one
-	targetContainer := pod.Spec.Containers[0]
-
+func (k *kubeFactory) GetExecutor(ns, pod, container string) (exec remotecommand.Executor, err error) {
 	req := k.clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
-		Name(pod.Name).
-		Namespace(pod.Namespace).
+		Name(pod).
+		Namespace(ns).
 		SubResource("exec").
-		Param("container", targetContainer.Name)
+		Param("container", container)
 
 	req.VersionedParams(&v1.PodExecOptions{
-		Container: targetContainer.Name,
+		Container: container,
 		Command:   []string{"/bin/sh"},
 		Stdin:     true,
 		Stdout:    true,
