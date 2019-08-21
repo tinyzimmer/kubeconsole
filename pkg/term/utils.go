@@ -32,6 +32,7 @@ func (c *controller) focusScroll(focus *widgets.List, direction string) {
 	if empty(focus) {
 		return
 	}
+	c.setupIfLogWindow()
 	switch direction {
 
 	case up:
